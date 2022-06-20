@@ -21,7 +21,7 @@ Sparse.prototype.search = function (q) {
       if (meta.lookup[i] >= q) break
     }
     // todo: check for duplicate lookup names
-    lqueue.push('l'+Math.max(0,i-1))
+    lqueue.push('l'+i)
     if (readNext) read(readSize, readNext)
     readNext = null
   })
@@ -41,15 +41,15 @@ Sparse.prototype.search = function (q) {
         rfset.delete(rfile)
         var offset = 0
         while (offset < buf.length) {
-          var id = varint.decode(buf, offset)
-          offset += varint.decode.bytes
           var flen = varint.decode(buf, offset)
           offset += varint.decode.bytes
+          var id = varint.decode(buf, offset)
           if (riset.has(id)) {
             riset.delete(id)
             var payload = buf.slice(offset, offset+flen)
-            queue.push(parsePayload(payload))
-            //console.log(id, parsePayload(payload))
+            var r = parsePayload(payload)
+            r.id = id
+            queue.push(r)
           }
           offset += flen
         }
@@ -81,6 +81,30 @@ Sparse.prototype.search = function (q) {
   }
 }
 
+Sparse.prototype.getRecord = function (id, cb) {
+  if (!cb) cb = noop
+  var self = this
+  self._getMeta(function (err, meta) {
+    if (err) return cb(err)
+    var rfile = getRecordFile(meta, id)
+    self._read(rfile, function (err, buf) {
+      if (err) return cb(err)
+      var offset = 0
+      while (offset < buf.length) {
+        var flen = varint.decode(buf, offset)
+        offset += varint.decode.bytes
+        var fid = varint.decode(buf, offset)
+        if (id === fid) {
+          var payload = buf.slice(offset, offset+flen)
+          return cb(null, parsePayload(payload))
+        }
+        offset += flen
+      }
+      cb(null, null)
+    })
+  })
+}
+
 Sparse.prototype._getMeta = function (cb) {
   var self = this
   if (self._meta) return nextTick(cb, null, self._meta)
@@ -91,15 +115,19 @@ Sparse.prototype._getMeta = function (cb) {
   })
 }
 
+function noop() {}
+
 function getRecordFile(meta, id) {
   for (var i = 0; i < meta.record.length; i++) {
     if (meta.record[i] >= id) break
   }
-  return 'r' + Math.max(0, i-1)
+  return 'r' + i
 }
 
 function parsePayload(buf) {
   var offset = 0
+  var id = varint.decode(buf, offset)
+  offset += varint.decode.bytes
   var nameLen = varint.decode(buf, offset)
   offset += varint.decode.bytes
   var name = buf.slice(offset, offset+nameLen).toString()
@@ -137,7 +165,7 @@ function parsePayload(buf) {
   var elevation = varint.decode(buf, offset)
   offset += varint.decode.bytes
   return {
-    name, longitude, latitude,
+    id, name, longitude, latitude,
     countryCode, cc2, admin1, admin2, admin3, admin4,
     population, elevation,
   }
