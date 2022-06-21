@@ -48,7 +48,6 @@ Sparse.prototype.search = function (q) {
             riset.delete(id)
             var payload = buf.slice(offset, offset+flen)
             var r = parsePayload(payload)
-            r.id = id
             queue.push(r)
           }
           offset += flen
