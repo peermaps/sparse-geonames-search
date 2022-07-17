@@ -1,6 +1,6 @@
 {
   "name": "sparse-geonames-search",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "search through processed geonames cities data without downloading the whole archive",
   "bin": {
     "sparse-geonames-search": "cmd.js"
