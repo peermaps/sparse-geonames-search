@@ -38,6 +38,7 @@ Sparse.prototype.search = function (q) {
     } else if (rfqueue.length > 0) {
       var rfile = rfqueue.shift()
       self._read(rfile, function (err, buf) {
+        if (err) return next(err)
         rfset.delete(rfile)
         var offset = 0
         while (offset < buf.length) {
@@ -57,6 +58,7 @@ Sparse.prototype.search = function (q) {
     } else if (lqueue.length > 0) {
       var lfile = lqueue.shift()
       self._read(lfile, function (err, buf) {
+        if (err) return next(err)
         var offset = 0
         while (offset < buf.length) {
           var klen = varint.decode(buf, offset)
